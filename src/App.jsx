@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { MathJaxContext, MathJax } from "better-react-mathjax"
 
 const App = () => {
   const [size, setSize] = useState(3)
@@ -168,11 +169,18 @@ const Solution = ({ matrix }) => {
   const expMatrix = JSON.stringify(
     matrix.map((row) => row.map((col) => Number(col))),
   )
-
+  
   return (
     <div>
-      <h2>Pasos</h2>
-      <p>{expMatrix}</p>
+      <MathJaxContext>
+        <h2>Pasos</h2>
+        <p>{expMatrix}</p>
+        <MathJax>
+          {`\\[
+            \\Delta = \\left| \\begin{matrix} 1 & 2 \\\\ 2 & 2 \\end{matrix} \\right|
+          \\]`}
+        </MathJax>
+      </MathJaxContext>
     </div>
   )
 }
