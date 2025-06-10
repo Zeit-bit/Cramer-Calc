@@ -6,6 +6,7 @@ const App = () => {
   const [matrix, setMatrix] = useState(null)
   const [augmentation, setAugmentation] = useState(null)
   const [solve, setSolve] = useState(false)
+  const [stepByStep, setStepByStep] = useState(true)
 
   const CreateEmptyMatrix = (size) => {
     const matrix = new Array()
@@ -114,6 +115,21 @@ const App = () => {
     setSolve(true)
   }
 
+  const HandleRandomMatrix = () => {
+    const matrix = new Array()
+    for (let i = 0; i < size; i++) {
+      matrix.push(new Array())
+      while (matrix[i].length < size)
+        matrix[i].push(Math.floor(Math.random() * 100 + 1))
+    }
+    const augmentation = new Array()
+    for (let i = 0; i < size; i++) {
+      augmentation.push(Math.floor(Math.random() * 100 + 1))
+    }
+    setMatrix(matrix)
+    setAugmentation(augmentation)
+  }
+
   const emptyMatrix = CreateEmptyMatrix(size)
   const emptyAugmentation = CreateEmptyAugmentation(size)
 
@@ -149,6 +165,20 @@ const App = () => {
               +
             </button>
           </div>
+          <div className="flex gap-2">
+            <button
+              className="mb-2 flex h-8 items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
+              onClick={HandleRandomMatrix}
+            >
+              Random matrix
+            </button>
+            <button
+              className="mb-2 flex h-8 items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
+              onClick={() => HandleSize(0)}
+            >
+              Clear matrix
+            </button>
+          </div>
 
           <div className="flex flex-col gap-5 border-4 p-5">
             <form onSubmit={(e) => HandleSolve(e)}>
@@ -159,6 +189,13 @@ const App = () => {
               <button className="m-auto mt-5 flex w-full items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500">
                 Solve
               </button>
+
+              <input
+                type="checkbox"
+                checked={stepByStep}
+                onChange={() => setStepByStep(!stepByStep)}
+              />
+              <label> Step by step</label>
             </form>
           </div>
         </>
@@ -168,13 +205,14 @@ const App = () => {
           matrix={matrix}
           augmentation={augmentation}
           GoBack={() => setSolve(false)}
+          stepByStep={stepByStep}
         />
       ) : null}
     </div>
   )
 }
 
-const Solution = ({ matrix, augmentation, GoBack }) => {
+const Solution = ({ matrix, augmentation, GoBack, stepByStep }) => {
   const integerMatrix = matrix.map((r) => r.map((c) => parseFloat(c)))
   const integerAugmentation = augmentation.map((r) => parseFloat(r))
   const deltasInfo = []
@@ -218,8 +256,10 @@ const Solution = ({ matrix, augmentation, GoBack }) => {
     return `\\left[ \\begin{array}{${formatAugmentation}} ${latex} \\end{array} \\right]`
   }
 
-  const GetDet = (matrix, key = [1], name = "") => {
+  const GetDet = (matrix, path, name = "") => {
     const classStyle = "border p-2 ml-10 mr-10 mt-2 md-2"
+    const makeKey = () => path.join("-")
+
     if (matrix.length === 1) {
       return (
         <div className={classStyle}>
@@ -252,9 +292,10 @@ const Solution = ({ matrix, augmentation, GoBack }) => {
         (${matrix[0][2]} * ${matrix[1][1]} * ${matrix[2][0]} +
           ${matrix[1][2]} * ${matrix[2][1]} * ${matrix[0][0]} +
           ${matrix[0][1]} * ${matrix[1][0]} * ${matrix[2][2]})`
+      console.log(`${makeKey()}`)
       return [
         result,
-        <div className={classStyle} key={key++}>
+        <div className={classStyle} key={`${makeKey()}`}>
           <MathJax>{`\\[${name} ${Matrix2Latex(matrix)} = ${steps} = ${result} \\]`}</MathJax>
         </div>,
       ]
@@ -269,13 +310,17 @@ const Solution = ({ matrix, augmentation, GoBack }) => {
       const sign = i % 2 === 0 ? +1 : -1
       const minor = removedRow.map((r) => r.filter((_, cI) => cI != i))
       steps += `${sign === +1 ? "+" : "-"} ${matrix[0][i]} ${Matrix2Latex(minor)}`
-      const [childrenResult, childrenJSX] = GetDet(minor, ++key)
+      const [childrenResult, childrenJSX] = GetDet(minor, [...path, String(i)])
       children.push(childrenJSX)
       result += sign * matrix[0][i] * childrenResult
     }
     steps += `= ${result} \\]`
 
-    return [result, <DetStep key={key++} latex={steps} children={children} />]
+    console.log(`${makeKey()}`)
+    return [
+      result,
+      <DetStep key={`${makeKey()}`} latex={steps} children={children} />,
+    ]
   }
 
   const GetSolutionMatrixes = (matrix, augmentation) => {
@@ -295,9 +340,9 @@ const Solution = ({ matrix, augmentation, GoBack }) => {
     integerAugmentation,
   )
 
-  deltasInfo.push(GetDet(integerMatrix, 1, "\\Delta = "))
+  deltasInfo.push(GetDet(integerMatrix, ["Delta"], "\\Delta = "))
   const cramerStepsToRender = solutionMatrixes.map((m, mI) => {
-    const deltaInfo = GetDet(m, 1, `\\Delta x${mI + 1} =`)
+    const deltaInfo = GetDet(m, [`DeltaX${mI + 1}`], `\\Delta x${mI + 1} =`)
     deltasInfo.push(deltaInfo)
     return (
       <CramerStep
@@ -313,7 +358,12 @@ const Solution = ({ matrix, augmentation, GoBack }) => {
   const deltas = deltasInfo.map((pair) => pair[0])
   const soluciones = deltas.map((d, dI) =>
     dI != 0 ? (
-      <CramerDeltaStep delta={deltas[0]} deltaX={d} xIndex={dI} />
+      <CramerDeltaStep
+        key={`sol-${dI}`}
+        delta={deltas[0]}
+        deltaX={d}
+        xIndex={dI}
+      />
     ) : null,
   )
 
@@ -333,21 +383,37 @@ const Solution = ({ matrix, augmentation, GoBack }) => {
             augmentation={integerAugmentation}
             AugmentedMAtrix2Latex={AugmentedMAtrix2Latex}
           />
-          <h2 className="border p-2 font-bold">Pasos</h2>
-          <CramerStep
-            matrix={integerMatrix}
-            deltaInfo={deltasInfo[0]}
-            Matrix2Latex={Matrix2Latex}
-            name={"\\Delta ="}
-          />
-          {deltas[0] !== 0 ? (
+
+          {stepByStep ? (
             <>
-              {cramerStepsToRender}
-              <h2 className="mt-4 border p-2 font-bold">Soluciones</h2>
-              {soluciones}
+              <h2 className="border p-2 font-bold">Steps</h2>
+              <CramerStep
+                matrix={integerMatrix}
+                deltaInfo={deltasInfo[0]}
+                Matrix2Latex={Matrix2Latex}
+                name={"\\Delta ="}
+              />
+              {deltas[0] !== 0 ? (
+                <>
+                  {cramerStepsToRender}
+                  <h2 className="mt-4 border p-2 font-bold">Solutions</h2>
+                  {soluciones}
+                </>
+              ) : (
+                <CantSolve />
+              )}
             </>
           ) : (
-            <CantSolve />
+            <>
+              {deltas[0] !== 0 ? (
+                <>
+                  <h2 className="mt-4 border p-2 font-bold">Solutions</h2>
+                  {soluciones}
+                </>
+              ) : (
+                <CantSolve />
+              )}
+            </>
           )}
         </MathJaxContext>
       </div>
