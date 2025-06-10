@@ -130,44 +130,55 @@ const App = () => {
       <h1 className="mt-5 border-4 p-2 text-3xl font-bold">
         [ Cramer Calculator ]
       </h1>
+      {!solve && (
+        <>
+          <div className="m-2 mt-8 flex h-8 gap-2">
+            <button
+              onClick={() => HandleSize(-1)}
+              className="flex aspect-square items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
+            >
+              -
+            </button>
 
-      <div className="m-2 mt-8 flex h-8 gap-2">
-        <button
-          onClick={() => HandleSize(-1)}
-          className="flex aspect-square items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
-        >
-          -
-        </button>
+            <div className="w-20 border-2 text-center">{size}</div>
 
-        <div className="w-20 border-2 text-center">{size}</div>
-
-        <button
-          onClick={() => HandleSize(1)}
-          className="flex aspect-square items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
-        >
-          +
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-5 border-4 p-5">
-        <form onSubmit={(e) => HandleSolve(e)}>
-          <div className="flex gap-4">
-            {renderingMatrix}
-            {renderingAugmentation}
+            <button
+              onClick={() => HandleSize(1)}
+              className="flex aspect-square items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
+            >
+              +
+            </button>
           </div>
-          <button className="m-auto mt-5 flex w-full items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500">
-            Solve
-          </button>
-        </form>
-      </div>
 
-      {solve ? <Solution matrix={matrix} /> : null}
+          <div className="flex flex-col gap-5 border-4 p-5">
+            <form onSubmit={(e) => HandleSolve(e)}>
+              <div className="flex gap-4">
+                {renderingMatrix}
+                {renderingAugmentation}
+              </div>
+              <button className="m-auto mt-5 flex w-full items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500">
+                Solve
+              </button>
+            </form>
+          </div>
+        </>
+      )}
+      {solve ? (
+        <Solution
+          matrix={matrix}
+          augmentation={augmentation}
+          GoBack={() => setSolve(false)}
+        />
+      ) : null}
     </div>
   )
 }
 
-const Solution = ({ matrix }) => {
+const Solution = ({ matrix, augmentation, GoBack }) => {
   const integerMatrix = matrix.map((r) => r.map((c) => parseFloat(c)))
+  const integerAugmentation = augmentation.map((r) => parseFloat(r))
+  const deltasInfo = []
+
   const Matrix2Latex = (matrix) => {
     let latex = ""
     const rows = matrix.map((r) => {
@@ -183,6 +194,28 @@ const Solution = ({ matrix }) => {
     }
 
     return `\\left| \\begin{matrix} ${latex} \\end{matrix} \\right|`
+  }
+
+  const AugmentedMAtrix2Latex = (matrix, augmentation) => {
+    let latex = ""
+    const rows = matrix.map((r, rI) => {
+      let update = ""
+      for (let i = 0; i < matrix.length; i++) {
+        update += `${r[i]}${" & "}`
+      }
+      update += augmentation[rI]
+      return update
+    })
+
+    for (let i = 0; i < matrix.length; i++) {
+      latex += `${rows[i]}${i < matrix.length - 1 ? " \\\\ " : ""}`
+    }
+
+    let formatAugmentation = ""
+    for (let i = 0; i < matrix.length + 2; i++) {
+      formatAugmentation += `${i == matrix.length ? "|" : "r"}`
+    }
+    return `\\left[ \\begin{array}{${formatAugmentation}} ${latex} \\end{array} \\right]`
   }
 
   const GetDet = (matrix, key = [1], name = "") => {
@@ -245,26 +278,136 @@ const Solution = ({ matrix }) => {
     return [result, <DetStep key={key++} latex={steps} children={children} />]
   }
 
-  const [deltaResult, deltaRender] = GetDet(integerMatrix, 1, "\\Delta =")
+  const GetSolutionMatrixes = (matrix, augmentation) => {
+    const arrayOfMatrix = []
+    for (let i = 0; i < matrix.length; i++) {
+      arrayOfMatrix.push(
+        matrix.map((r, rI) =>
+          r.map((c, cI) => (cI === i ? augmentation[rI] : c)),
+        ),
+      )
+    }
+    return arrayOfMatrix
+  }
+
+  const solutionMatrixes = GetSolutionMatrixes(
+    integerMatrix,
+    integerAugmentation,
+  )
+
+  deltasInfo.push(GetDet(integerMatrix, 1, "\\Delta = "))
+  const cramerStepsToRender = solutionMatrixes.map((m, mI) => {
+    const deltaInfo = GetDet(m, 1, `\\Delta x${mI + 1} =`)
+    deltasInfo.push(deltaInfo)
+    return (
+      <CramerStep
+        key={`CramerStep-${mI}`}
+        name={`\\Delta x${mI + 1} =`}
+        matrix={m}
+        deltaInfo={deltaInfo}
+        Matrix2Latex={Matrix2Latex}
+      />
+    )
+  })
+
+  const deltas = deltasInfo.map((pair) => pair[0])
+  const soluciones = deltas.map((d, dI) =>
+    dI != 0 ? (
+      <CramerDeltaStep delta={deltas[0]} deltaX={d} xIndex={dI} />
+    ) : null,
+  )
+
+  return (
+    <>
+      <button
+        className="mt-5 border pr-2 pl-2 hover:bg-gray-200 active:bg-gray-400"
+        onClick={GoBack}
+      >
+        Back
+      </button>
+      <div className="m-5 min-w-9/12 overflow-scroll border-4 p-2">
+        <MathJaxContext>
+          <h2 className="border p-2 font-bold">Input</h2>
+          <CramerInput
+            matrix={integerMatrix}
+            augmentation={integerAugmentation}
+            AugmentedMAtrix2Latex={AugmentedMAtrix2Latex}
+          />
+          <h2 className="border p-2 font-bold">Pasos</h2>
+          <CramerStep
+            matrix={integerMatrix}
+            deltaInfo={deltasInfo[0]}
+            Matrix2Latex={Matrix2Latex}
+            name={"\\Delta ="}
+          />
+          {deltas[0] !== 0 ? (
+            <>
+              {cramerStepsToRender}
+              <h2 className="mt-4 border p-2 font-bold">Soluciones</h2>
+              {soluciones}
+            </>
+          ) : (
+            <CantSolve />
+          )}
+        </MathJaxContext>
+      </div>
+    </>
+  )
+}
+
+const CantSolve = () => {
+  return (
+    <div className="m-2 mt-4 border p-2 text-center">
+      <h2>
+        <strong>No se puede resolver</strong> porque el{" "}
+        <strong>determinante</strong> de la matriz original es{" "}
+        <strong>cero</strong>
+      </h2>
+    </div>
+  )
+}
+
+const CramerDeltaStep = ({ delta, deltaX, xIndex }) => {
+  const result = deltaX / delta
+  return (
+    <MathJax>
+      {`\\[
+            x${xIndex} = \\frac{\\Delta x${xIndex}}{\\Delta} = ${result}
+        \\]`}
+    </MathJax>
+  )
+}
+
+const CramerInput = ({ matrix, augmentation, AugmentedMAtrix2Latex }) => {
+  return (
+    <MathJax>
+      {`\\[
+            ${AugmentedMAtrix2Latex(matrix, augmentation)}
+          \\]`}
+    </MathJax>
+  )
+}
+
+const CramerStep = ({ matrix, deltaInfo, Matrix2Latex, name }) => {
+  //const [deltaResult, deltaRender] = GetDet(matrix, 1, name)
+  const [deltaResult, deltaRender] = deltaInfo
   const [showDelta, setShowDelta] = useState(false)
   return (
-    <div className="m-5 border-4 p-2">
-      <MathJaxContext>
-        <h2 className="border p-2 font-bold">Pasos</h2>
-        <MathJax>
-          {`\\[
-            \\Delta = ${Matrix2Latex(integerMatrix)} = ${deltaResult}
+    <>
+      <MathJax>
+        {`\\[
+            ${name} ${Matrix2Latex(matrix)} = ${deltaResult}
           \\]`}
-        </MathJax>
-        <button
-          className="border pr-2 pl-2 hover:bg-gray-200 active:bg-gray-400"
-          onClick={() => setShowDelta(!showDelta)}
-        >
-          Show details
-        </button>
-        {showDelta && deltaRender}
-      </MathJaxContext>
-    </div>
+      </MathJax>
+
+      <button
+        className="border pr-2 pl-2 hover:bg-gray-200 active:bg-gray-400"
+        onClick={() => setShowDelta(!showDelta)}
+      >
+        {!showDelta ? "show details" : "hide details"}
+      </button>
+      {showDelta && deltaRender}
+    </>
   )
 }
 
