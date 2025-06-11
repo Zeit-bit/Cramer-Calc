@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { MathJaxContext, MathJax } from "better-react-mathjax"
+import { Link } from "react-router-dom"
 
 const App = () => {
   const [size, setSize] = useState(3)
@@ -210,6 +211,12 @@ const App = () => {
               <label> Step by step</label>
             </form>
           </div>
+          <Link
+            to="/quickquide"
+            className="text-blue-700 hover:text-blue-950 hover:underline"
+          >
+            Click here for a quickguide
+          </Link>
         </>
       )}
       {solve ? (
@@ -361,12 +368,12 @@ const Solution = ({
 
   deltasInfo.push(GetDet(integerMatrix, ["Delta"], "\\Delta = "))
   const cramerStepsToRender = solutionMatrixes.map((m, mI) => {
-    const deltaInfo = GetDet(m, [`DeltaX${mI + 1}`], `\\Delta x${mI + 1} =`)
+    const deltaInfo = GetDet(m, [`DeltaX${mI + 1}`], `\\Delta x_${mI + 1} =`)
     deltasInfo.push(deltaInfo)
     return (
       <CramerStep
         key={`CramerStep-${mI}`}
-        name={`\\Delta x${mI + 1} =`}
+        name={`\\Delta x_${mI + 1} =`}
         matrix={m}
         deltaInfo={deltaInfo}
         Matrix2Latex={Matrix2Latex}
@@ -544,7 +551,7 @@ const CramerDeltaStep = ({ delta, deltaX, xIndex }) => {
   return (
     <MathJax>
       {`\\[
-            x${xIndex} = \\frac{\\Delta x${xIndex}}{\\Delta} = ${result}
+            x_${xIndex} = \\frac{\\Delta x${xIndex}}{\\Delta} = ${result}
         \\]`}
     </MathJax>
   )
