@@ -1,4 +1,7 @@
 import { Link } from "react-router-dom"
+import twoByTwo from "./assets/2by2.png"
+import sarrus from "./assets/sarrus.png"
+import cofactors from "./assets/cofactors.png"
 
 const Quickguide = () => {
   const style = "m-10 border p-5"
@@ -101,11 +104,7 @@ const Quickguide = () => {
           determinant is
           <code>&nbsp;det(A)&nbsp;=&nbsp;ad&nbsp;−&nbsp;bc</code>.
         </p>
-        <img
-          className="h-90 border"
-          src="./images/2by2.png"
-          alt="2by2-example"
-        />
+        <img className="h-90 border" src={twoByTwo} alt="2by2-example" />
       </div>
 
       {/* -- 5. Determinant of a 3×3 Matrix: Rule of Sarrus -- */}
@@ -128,11 +127,7 @@ const Quickguide = () => {
           right, draw downward (positive) and upward (negative) diagonals, then
           subtract the upward sum from the downward sum.
         </p>
-        <img
-          className="h-90 border"
-          src="./images/sarrus.png"
-          alt="sarrus-example"
-        />
+        <img className="h-90 border" src={sarrus} alt="sarrus-example" />
       </div>
 
       {/* -- 6. Determinant of Any Size: Cofactor Expansion -- */}
@@ -155,11 +150,7 @@ det(A) = Σ (-1)^{i+j} · a_{ij} · det(M_{ij})
           determinants. This method works for all sizes, although it becomes
           computationally expensive for large <em>n</em>.
         </p>
-        <img
-          className="h-90 border"
-          src="./images/cofactors.png"
-          alt="cofactors-example"
-        />
+        <img className="h-90 border" src={cofactors} alt="cofactors-example" />
       </div>
 
       {/* -- 7. Putting It All Together -- */}
