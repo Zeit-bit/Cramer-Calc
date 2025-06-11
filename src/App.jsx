@@ -7,6 +7,7 @@ const App = () => {
   const [augmentation, setAugmentation] = useState(null)
   const [solve, setSolve] = useState(false)
   const [stepByStep, setStepByStep] = useState(true)
+  const [test, setTest] = useState(false)
 
   const CreateEmptyMatrix = (size) => {
     const matrix = new Array()
@@ -186,9 +187,20 @@ const App = () => {
                 {renderingMatrix}
                 {renderingAugmentation}
               </div>
-              <button className="m-auto mt-5 flex w-full items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500">
-                Solve
-              </button>
+              <div className="flex gap-2">
+                <button
+                  className="m-auto mt-5 flex w-full items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
+                  onClick={() => setTest(false)}
+                >
+                  Solve
+                </button>
+                <button
+                  className="m-auto mt-5 flex w-full items-center justify-center border-2 p-2 hover:border-blue-700 hover:bg-gray-800 hover:text-white active:bg-blue-500"
+                  onClick={() => setTest(true)}
+                >
+                  Test
+                </button>
+              </div>
 
               <input
                 type="checkbox"
@@ -206,13 +218,22 @@ const App = () => {
           augmentation={augmentation}
           GoBack={() => setSolve(false)}
           stepByStep={stepByStep}
+          test={test}
+          showSolutions={() => setTest(false)}
         />
       ) : null}
     </div>
   )
 }
 
-const Solution = ({ matrix, augmentation, GoBack, stepByStep }) => {
+const Solution = ({
+  matrix,
+  augmentation,
+  GoBack,
+  stepByStep,
+  test,
+  showSolutions,
+}) => {
   const integerMatrix = matrix.map((r) => r.map((c) => parseFloat(c)))
   const integerAugmentation = augmentation.map((r) => parseFloat(r))
   const deltasInfo = []
@@ -292,7 +313,6 @@ const Solution = ({ matrix, augmentation, GoBack, stepByStep }) => {
         (${matrix[0][2]} * ${matrix[1][1]} * ${matrix[2][0]} +
           ${matrix[1][2]} * ${matrix[2][1]} * ${matrix[0][0]} +
           ${matrix[0][1]} * ${matrix[1][0]} * ${matrix[2][2]})`
-      console.log(`${makeKey()}`)
       return [
         result,
         <div className={classStyle} key={`${makeKey()}`}>
@@ -316,7 +336,6 @@ const Solution = ({ matrix, augmentation, GoBack, stepByStep }) => {
     }
     steps += `= ${result} \\]`
 
-    console.log(`${makeKey()}`)
     return [
       result,
       <DetStep key={`${makeKey()}`} latex={steps} children={children} />,
@@ -367,6 +386,62 @@ const Solution = ({ matrix, augmentation, GoBack, stepByStep }) => {
     ) : null,
   )
 
+  // Test yourself section
+  const initialAnswers = []
+  for (let i = 0; i < integerMatrix.length; i++) {
+    initialAnswers.push(0)
+  }
+  const [answers, setAnswers] = useState(initialAnswers)
+  const inputToRender = []
+  for (let i = 0; i < integerMatrix.length; i++) {
+    inputToRender.push(
+      <div key={i} className="flex justify-center gap-2">
+        <MathJax>{`\\[x${i + 1} = \\]`}</MathJax>
+        <input
+          className="w-80 border text-center"
+          type="number"
+          required
+          value={answers[i]}
+          onChange={(e) => {
+            const copy = [...answers]
+            copy[i] = e.target.value
+            setAnswers(copy)
+          }}
+        ></input>
+      </div>,
+    )
+  }
+
+  const solucionesAcomparar = []
+  for (let i = 0; i < matrix.length; i++) {
+    solucionesAcomparar.push(deltas[i + 1] / deltas[0])
+  }
+
+  console.log(solucionesAcomparar)
+
+  const handleCheckAnswers = (e) => {
+    e.preventDefault()
+    const grading = []
+    let nOfCorrect = 0
+    for (let i = 0; i < answers.length; i++) {
+      console.log("Test ", i)
+      console.log(solucionesAcomparar[i] - parseFloat(answers[i]))
+      if (Math.abs(solucionesAcomparar[i] - parseFloat(answers[i])) < 0.01) {
+        grading.push(1)
+      } else {
+        grading.push(0)
+      }
+      nOfCorrect += grading[i]
+    }
+    console.log(grading)
+
+    alert(`Correct answers: ${nOfCorrect}/${answers.length}`)
+  }
+
+  const handleNoSolution = () => {
+    alert(deltas[0] === 0 ? "Correct" : "Incorrect")
+  }
+
   return (
     <>
       <button
@@ -384,34 +459,65 @@ const Solution = ({ matrix, augmentation, GoBack, stepByStep }) => {
             AugmentedMAtrix2Latex={AugmentedMAtrix2Latex}
           />
 
-          {stepByStep ? (
+          {/* Test Section */}
+          {test ? (
             <>
-              <h2 className="border p-2 font-bold">Steps</h2>
-              <CramerStep
-                matrix={integerMatrix}
-                deltaInfo={deltasInfo[0]}
-                Matrix2Latex={Matrix2Latex}
-                name={"\\Delta ="}
-              />
-              {deltas[0] !== 0 ? (
-                <>
-                  {cramerStepsToRender}
-                  <h2 className="mt-4 border p-2 font-bold">Solutions</h2>
-                  {soluciones}
-                </>
-              ) : (
-                <CantSolve />
-              )}
+              <h2 className="border p-2 font-bold">Your Answers</h2>
+              <form onSubmit={(e) => handleCheckAnswers(e)}>
+                <div className="flex flex-col gap-2 p-2">{inputToRender}</div>
+                <div className="flex justify-center p-2">
+                  <button className="border pr-2 pl-2 hover:bg-gray-200 active:bg-gray-400">
+                    Check Answers
+                  </button>
+                </div>
+              </form>
+              <div className="flex justify-center">
+                <button
+                  className="border pr-2 pl-2 hover:bg-gray-200 active:bg-gray-400"
+                  onClick={handleNoSolution}
+                >
+                  No solution
+                </button>
+              </div>
+              <button
+                className="border pr-2 pl-2 hover:bg-gray-200 active:bg-gray-400"
+                onClick={showSolutions}
+              >
+                Show Solutions
+              </button>
             </>
           ) : (
             <>
-              {deltas[0] !== 0 ? (
+              {stepByStep ? (
                 <>
-                  <h2 className="mt-4 border p-2 font-bold">Solutions</h2>
-                  {soluciones}
+                  <h2 className="mt-2 border p-2 font-bold">Steps</h2>
+                  <CramerStep
+                    matrix={integerMatrix}
+                    deltaInfo={deltasInfo[0]}
+                    Matrix2Latex={Matrix2Latex}
+                    name={"\\Delta ="}
+                  />
+                  {deltas[0] !== 0 ? (
+                    <>
+                      {cramerStepsToRender}
+                      <h2 className="mt-4 border p-2 font-bold">Solutions</h2>
+                      {soluciones}
+                    </>
+                  ) : (
+                    <CantSolve />
+                  )}
                 </>
               ) : (
-                <CantSolve />
+                <>
+                  {deltas[0] !== 0 ? (
+                    <>
+                      <h2 className="mt-4 border p-2 font-bold">Solutions</h2>
+                      {soluciones}
+                    </>
+                  ) : (
+                    <CantSolve />
+                  )}
+                </>
               )}
             </>
           )}
